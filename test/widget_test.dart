@@ -9,7 +9,7 @@ void main() {
 
     expect(find.text('เข้าสู่ระบบ'), findsWidgets);
     expect(find.text('สมัครสมาชิก'), findsOneWidget);
-    expect(find.text('อีเมล'), findsOneWidget);
+    expect(find.text('ชื่อผู้ใช้'), findsOneWidget);
     expect(find.text('รหัสผ่าน'), findsOneWidget);
     expect(find.text('Connected API'), findsOneWidget);
   });
@@ -23,7 +23,7 @@ void main() {
     await tester.tap(find.byType(FilledButton));
     await tester.pump();
 
-    expect(find.text('กรุณากรอกอีเมล'), findsOneWidget);
+    expect(find.text('กรุณากรอกชื่อผู้ใช้'), findsOneWidget);
     expect(find.text('กรุณากรอกรหัสผ่าน'), findsOneWidget);
   });
 }

@@ -1,8 +1,12 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:ms_undraw/ms_undraw.dart';
 
+import '../../app/app_constant.dart';
 import '../create_new_account/create_new_account_page.dart';
+import '../main_home/main_home_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -16,29 +20,85 @@ class _LoginPageState extends State<LoginPage> {
   static const _deepIndigo = Color(0xFF0D144F);
 
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  void _submit() {
+  Map<String, String> _createBody() {
+    return {
+      'username': _usernameController.text.trim(),
+      'password': _passwordController.text,
+    };
+  }
+
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('กำลังเข้าสู่ระบบ')));
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      final response = await Dio().post(
+        AppConstant.apiLoginUrl,
+        data: _createBody(),
+        options: Options(headers: {'Content-Type': 'application/json'}),
+      );
+
+      final data = response.data;
+      final accessToken = data is Map ? data['access_token']?.toString() : null;
+
+      if (response.statusCode != null &&
+          response.statusCode! >= 200 &&
+          response.statusCode! < 300 &&
+          accessToken != null &&
+          accessToken.isNotEmpty) {
+        await GetStorage().write(AppConstant.accessTokenKey, accessToken);
+        Get.offAll(() => const MainHomePage());
+        Get.snackbar(
+          'wellcome',
+          'เข้าสู่ระบบสำเร็จ',
+          backgroundColor: const Color(0xFFE65100),
+          colorText: Colors.white,
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return;
+      }
+
+      _showErrorSnackbar();
+    } catch (_) {
+      _showErrorSnackbar();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
   }
 
   void _openRegister() {
     Get.to(() => const CreateNewAccountPage());
+  }
+
+  void _showErrorSnackbar() {
+    Get.snackbar(
+      'ลองใหม่',
+      'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่',
+      backgroundColor: Colors.red,
+      colorText: Colors.white,
+      snackPosition: SnackPosition.BOTTOM,
+    );
   }
 
   @override
@@ -80,7 +140,7 @@ class _LoginPageState extends State<LoginPage> {
                         SizedBox(height: isWide ? 28 : 18),
                         _LoginPanel(
                           formKey: _formKey,
-                          emailController: _emailController,
+                          usernameController: _usernameController,
                           passwordController: _passwordController,
                           obscurePassword: _obscurePassword,
                           onTogglePassword: () {
@@ -90,6 +150,7 @@ class _LoginPageState extends State<LoginPage> {
                           },
                           onSubmit: _submit,
                           onRegister: _openRegister,
+                          isSubmitting: _isSubmitting,
                         ),
                       ],
                     ),
@@ -155,21 +216,23 @@ class _LoginIllustration extends StatelessWidget {
 class _LoginPanel extends StatelessWidget {
   const _LoginPanel({
     required this.formKey,
-    required this.emailController,
+    required this.usernameController,
     required this.passwordController,
     required this.obscurePassword,
     required this.onTogglePassword,
     required this.onSubmit,
     required this.onRegister,
+    required this.isSubmitting,
   });
 
   final GlobalKey<FormState> formKey;
-  final TextEditingController emailController;
+  final TextEditingController usernameController;
   final TextEditingController passwordController;
   final bool obscurePassword;
   final VoidCallback onTogglePassword;
   final VoidCallback onSubmit;
   final VoidCallback onRegister;
+  final bool isSubmitting;
 
   @override
   Widget build(BuildContext context) {
@@ -211,20 +274,16 @@ class _LoginPanel extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               TextFormField(
-                controller: emailController,
-                keyboardType: TextInputType.emailAddress,
+                controller: usernameController,
+                keyboardType: TextInputType.name,
                 textInputAction: TextInputAction.next,
                 decoration: _inputDecoration(
-                  label: 'อีเมล',
-                  icon: Icons.email_outlined,
+                  label: 'ชื่อผู้ใช้',
+                  icon: Icons.account_circle_outlined,
                 ),
                 validator: (value) {
-                  final email = value?.trim() ?? '';
-                  if (email.isEmpty) {
-                    return 'กรุณากรอกอีเมล';
-                  }
-                  if (!email.contains('@')) {
-                    return 'กรุณากรอกอีเมลให้ถูกต้อง';
+                  if ((value?.trim() ?? '').isEmpty) {
+                    return 'กรุณากรอกชื่อผู้ใช้';
                   }
                   return null;
                 },
@@ -263,9 +322,20 @@ class _LoginPanel extends StatelessWidget {
               SizedBox(
                 height: 50,
                 child: FilledButton.icon(
-                  onPressed: onSubmit,
-                  icon: const Icon(Icons.login_outlined),
-                  label: const Text('เข้าสู่ระบบ'),
+                  onPressed: isSubmitting ? null : onSubmit,
+                  icon: isSubmitting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.login_outlined),
+                  label: Text(
+                    isSubmitting ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ',
+                  ),
                   style: FilledButton.styleFrom(
                     backgroundColor: indigo,
                     foregroundColor: Colors.white,

@@ -1,6 +1,9 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:ms_undraw/ms_undraw.dart';
+
+import '../../app/app_constant.dart';
 
 class CreateNewAccountPage extends StatefulWidget {
   const CreateNewAccountPage({super.key});
@@ -19,6 +22,7 @@ class _CreateNewAccountPageState extends State<CreateNewAccountPage> {
   final _passwordController = TextEditingController();
   final _fullNameController = TextEditingController();
   bool _obscurePassword = true;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -38,12 +42,56 @@ class _CreateNewAccountPageState extends State<CreateNewAccountPage> {
     };
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    _createBody();
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      final response = await Dio().post(
+        AppConstant.apiRegisterUrl,
+        data: _createBody(),
+        options: Options(headers: {'Content-Type': 'application/json'}),
+      );
+
+      if (response.statusCode != null &&
+          response.statusCode! >= 200 &&
+          response.statusCode! < 300) {
+        Get.back();
+        Get.snackbar(
+          'สำเร็จ',
+          'สมัครสมาชิกสำเร็จ',
+          backgroundColor: Colors.orange,
+          colorText: Colors.white,
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return;
+      }
+
+      _showErrorSnackbar();
+    } catch (_) {
+      _showErrorSnackbar();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
+
+  void _showErrorSnackbar() {
+    Get.snackbar(
+      'ลองใหม่',
+      'สมัครสมาชิกไม่สำเร็จ กรุณาลองใหม่',
+      backgroundColor: Colors.red,
+      colorText: Colors.white,
+      snackPosition: SnackPosition.BOTTOM,
+    );
   }
 
   @override
@@ -111,6 +159,7 @@ class _CreateNewAccountPageState extends State<CreateNewAccountPage> {
                             });
                           },
                           onSubmit: _submit,
+                          isSubmitting: _isSubmitting,
                         ),
                       ],
                     ),
@@ -183,6 +232,7 @@ class _RegisterPanel extends StatelessWidget {
     required this.obscurePassword,
     required this.onTogglePassword,
     required this.onSubmit,
+    required this.isSubmitting,
   });
 
   final GlobalKey<FormState> formKey;
@@ -193,6 +243,7 @@ class _RegisterPanel extends StatelessWidget {
   final bool obscurePassword;
   final VoidCallback onTogglePassword;
   final VoidCallback onSubmit;
+  final bool isSubmitting;
 
   @override
   Widget build(BuildContext context) {
@@ -318,9 +369,18 @@ class _RegisterPanel extends StatelessWidget {
               SizedBox(
                 height: 50,
                 child: FilledButton.icon(
-                  onPressed: onSubmit,
-                  icon: const Icon(Icons.person_add_alt_1_outlined),
-                  label: const Text('สมัครสมาชิก'),
+                  onPressed: isSubmitting ? null : onSubmit,
+                  icon: isSubmitting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.person_add_alt_1_outlined),
+                  label: Text(isSubmitting ? 'กำลังสมัคร...' : 'สมัครสมาชิก'),
                   style: FilledButton.styleFrom(
                     backgroundColor: indigo,
                     foregroundColor: Colors.white,
