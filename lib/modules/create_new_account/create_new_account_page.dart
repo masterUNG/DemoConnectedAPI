@@ -2,29 +2,40 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:ms_undraw/ms_undraw.dart';
 
-import '../create_new_account/create_new_account_page.dart';
-
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+class CreateNewAccountPage extends StatefulWidget {
+  const CreateNewAccountPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State<CreateNewAccountPage> createState() => _CreateNewAccountPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _CreateNewAccountPageState extends State<CreateNewAccountPage> {
   static const _indigo = Color(0xFF1A237E);
   static const _deepIndigo = Color(0xFF0D144F);
 
   final _formKey = GlobalKey<FormState>();
+  final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _fullNameController = TextEditingController();
   bool _obscurePassword = true;
 
   @override
   void dispose() {
+    _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _fullNameController.dispose();
     super.dispose();
+  }
+
+  Map<String, String> _createBody() {
+    return {
+      'username': _usernameController.text.trim(),
+      'email': _emailController.text.trim(),
+      'password': _passwordController.text,
+      'full_name': _fullNameController.text.trim(),
+    };
   }
 
   void _submit() {
@@ -32,13 +43,7 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('กำลังเข้าสู่ระบบ')));
-  }
-
-  void _openRegister() {
-    Get.to(() => const CreateNewAccountPage());
+    _createBody();
   }
 
   @override
@@ -63,25 +68,42 @@ class _LoginPageState extends State<LoginPage> {
                 child: SingleChildScrollView(
                   padding: EdgeInsets.fromLTRB(
                     horizontalPadding,
-                    24,
+                    16,
                     horizontalPadding,
                     32,
                   ),
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
                       maxWidth: isWide ? 520 : 430,
-                      minHeight: constraints.maxHeight - 56,
+                      minHeight: constraints.maxHeight - 48,
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        _LoginIllustration(isWide: isWide),
-                        SizedBox(height: isWide ? 28 : 18),
-                        _LoginPanel(
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: IconButton.filledTonal(
+                            tooltip: 'กลับ',
+                            onPressed: Get.back,
+                            icon: const Icon(Icons.arrow_back),
+                            style: IconButton.styleFrom(
+                              backgroundColor: Colors.white.withValues(
+                                alpha: 0.92,
+                              ),
+                              foregroundColor: _indigo,
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: isWide ? 18 : 10),
+                        _RegisterIllustration(isWide: isWide),
+                        SizedBox(height: isWide ? 24 : 16),
+                        _RegisterPanel(
                           formKey: _formKey,
+                          usernameController: _usernameController,
                           emailController: _emailController,
                           passwordController: _passwordController,
+                          fullNameController: _fullNameController,
                           obscurePassword: _obscurePassword,
                           onTogglePassword: () {
                             setState(() {
@@ -89,7 +111,6 @@ class _LoginPageState extends State<LoginPage> {
                             });
                           },
                           onSubmit: _submit,
-                          onRegister: _openRegister,
                         ),
                       ],
                     ),
@@ -104,8 +125,8 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-class _LoginIllustration extends StatelessWidget {
-  const _LoginIllustration({required this.isWide});
+class _RegisterIllustration extends StatelessWidget {
+  const _RegisterIllustration({required this.isWide});
 
   final bool isWide;
 
@@ -114,18 +135,18 @@ class _LoginIllustration extends StatelessWidget {
     return Column(
       children: [
         SizedBox(
-          height: isWide ? 260 : 210,
+          height: isWide ? 220 : 170,
           child: UnDraw(
-            illustration: UnDrawIllustration.connected_world,
+            illustration: UnDrawIllustration.sign_up,
             color: const Color(0xFF7986CB),
-            semanticLabel: 'ภาพประกอบโลกที่เชื่อมต่อกัน',
+            semanticLabel: 'ภาพประกอบสมัครสมาชิก',
             placeholder: const Center(
               child: CircularProgressIndicator(color: Colors.white),
             ),
             errorWidget: const Icon(
-              Icons.public_outlined,
+              Icons.person_add_alt_1_outlined,
               color: Colors.white,
-              size: 96,
+              size: 88,
             ),
           ),
         ),
@@ -140,7 +161,7 @@ class _LoginIllustration extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          'เชื่อมต่อระบบของคุณได้อย่างมั่นใจ',
+          'สร้างบัญชีเพื่อเริ่มเชื่อมต่อระบบของคุณ',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: Colors.white.withValues(alpha: 0.82),
@@ -152,24 +173,26 @@ class _LoginIllustration extends StatelessWidget {
   }
 }
 
-class _LoginPanel extends StatelessWidget {
-  const _LoginPanel({
+class _RegisterPanel extends StatelessWidget {
+  const _RegisterPanel({
     required this.formKey,
+    required this.usernameController,
     required this.emailController,
     required this.passwordController,
+    required this.fullNameController,
     required this.obscurePassword,
     required this.onTogglePassword,
     required this.onSubmit,
-    required this.onRegister,
   });
 
   final GlobalKey<FormState> formKey;
+  final TextEditingController usernameController;
   final TextEditingController emailController;
   final TextEditingController passwordController;
+  final TextEditingController fullNameController;
   final bool obscurePassword;
   final VoidCallback onTogglePassword;
   final VoidCallback onSubmit;
-  final VoidCallback onRegister;
 
   @override
   Widget build(BuildContext context) {
@@ -196,7 +219,7 @@ class _LoginPanel extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'เข้าสู่ระบบ',
+                'สมัครสมาชิก',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   color: indigo,
                   fontWeight: FontWeight.w800,
@@ -204,12 +227,28 @@ class _LoginPanel extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                'กรอกข้อมูลบัญชีของคุณเพื่อใช้งานต่อ',
+                'กรอกข้อมูลสำหรับสร้างบัญชีใหม่',
                 style: Theme.of(
                   context,
                 ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade700),
               ),
               const SizedBox(height: 24),
+              TextFormField(
+                controller: usernameController,
+                keyboardType: TextInputType.name,
+                textInputAction: TextInputAction.next,
+                decoration: _inputDecoration(
+                  label: 'ชื่อผู้ใช้',
+                  icon: Icons.account_circle_outlined,
+                ),
+                validator: (value) {
+                  if ((value?.trim() ?? '').isEmpty) {
+                    return 'กรุณากรอกชื่อผู้ใช้';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: emailController,
                 keyboardType: TextInputType.emailAddress,
@@ -233,7 +272,7 @@ class _LoginPanel extends StatelessWidget {
               TextFormField(
                 controller: passwordController,
                 obscureText: obscurePassword,
-                textInputAction: TextInputAction.done,
+                textInputAction: TextInputAction.next,
                 decoration: _inputDecoration(
                   label: 'รหัสผ่าน',
                   icon: Icons.lock_outline,
@@ -257,6 +296,22 @@ class _LoginPanel extends StatelessWidget {
                   }
                   return null;
                 },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: fullNameController,
+                keyboardType: TextInputType.name,
+                textInputAction: TextInputAction.done,
+                decoration: _inputDecoration(
+                  label: 'ชื่อ-นามสกุล',
+                  icon: Icons.badge_outlined,
+                ),
+                validator: (value) {
+                  if ((value?.trim() ?? '').isEmpty) {
+                    return 'กรุณากรอกชื่อ-นามสกุล';
+                  }
+                  return null;
+                },
                 onFieldSubmitted: (_) => onSubmit(),
               ),
               const SizedBox(height: 24),
@@ -264,8 +319,8 @@ class _LoginPanel extends StatelessWidget {
                 height: 50,
                 child: FilledButton.icon(
                   onPressed: onSubmit,
-                  icon: const Icon(Icons.login_outlined),
-                  label: const Text('เข้าสู่ระบบ'),
+                  icon: const Icon(Icons.person_add_alt_1_outlined),
+                  label: const Text('สมัครสมาชิก'),
                   style: FilledButton.styleFrom(
                     backgroundColor: indigo,
                     foregroundColor: Colors.white,
@@ -277,21 +332,6 @@ class _LoginPanel extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 14),
-              OutlinedButton.icon(
-                onPressed: onRegister,
-                icon: const Icon(Icons.person_add_alt_1_outlined),
-                label: const Text('สมัครสมาชิก'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: indigo,
-                  side: const BorderSide(color: indigo),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  textStyle: const TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
             ],
